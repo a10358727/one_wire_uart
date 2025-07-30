@@ -1,0 +1,252 @@
+"File: 50.asm        Assembler  Version 2.98      Page 1
+
+
+   1  0000              include HT66F50.inc
+
+
+   2  0000              
+   3  0000              ds	.section	'data'
+   4  0000              
+   5  0000              UART_PIN EQU PA4
+   6  0000              UART_PINC EQU PAC4
+   7  0000              UART_PINPU EQU PAPU4
+   8  0000              
+   9  0000  00          UART_DATA DB ?
+  10  0001  00          command DB ?
+  11  0002  00          BUFFER2 DB ?
+  12  0003              
+  13  0003  00          COUNT DB ?
+  14  0004  00          END_L DB ?
+  15  0005  00          END_H DB ?
+  16  0006              
+  17  0006              
+  18  0000              cs	.section	at  000h	'code'
+  19  0000              
+  20  0000              
+  21  0000              INIT:
+  22  0000  1F32        	clr ACERL
+  23  0001  321B        	SET UART_PINC	
+  24  0002  3219        	SET UART_PINPU		
+  25  0003              	
+  26  0003              MAIN:
+  27  0003              	
+  28  0003  3E1A        	SZ UART_PIN			;接收資料
+  29  0004  2803        	JMP $-1
+  30  0005  203A        	CALL UART_READ
+  31  0006              	
+  32  0006  0700     R  	MOV A,UART_DATA		;
+  33  0007  0EF0        	AND A,11110000B		;接收到的資料高4bit為地址
+  34  0008  0CD0        	XOR A,0d0H			;地址為F
+  35  0009  390A        	SNZ Z				
+  36  000A  2803        	JMP MAIN
+  37  000B              		
+  38  000B  0700     R  	MOV A,UART_DATA		
+  39  000C  0E0F        	AND A,00001111B		;接收到的資料低4bit為指令	
+  40  000D  0080     R  	mov command,A		;
+  41  000E              	
+  42  000E  0180     R  	CPL UART_DATA		;將資料取補數並回傳
+  43  000F  2029        	CALL UART_WRITE
+  44  0010              	
+  45  0010  0700     R  	mov a,command	
+  46  0011  0C00        	XOR A,00h			;指令為00h
+  47  0012  390A        	SNZ Z
+  48  0013  2816        	JMP $+3
+  49  0014  2061        	CALL WRITE_ID
+  50  0015  2803        	JMP MAIN
+  51  0016              	
+  52  0016  0700     R  	mov a,command	
+  53  0017  0C01        	XOR A,01h			;指令為01h
+  54  0018  390A        	SNZ Z
+  55  0019  281C        	JMP $+3
+  56  001A  207F        	CALL WRITE_DAY
+  57  001B  2803        	JMP MAIN
+"File: 50.asm        Assembler  Version 2.98      Page 2
+
+  58  001C              	
+  59  001C  0700     R  	mov a,command		
+  60  001D  0C02        	XOR A,02h			;指令為02h
+  61  001E  390A        	SNZ Z
+  62  001F  2822        	JMP $+3
+  63  0020  206B        	CALL WRITE_NAME
+  64  0021  2803        	JMP MAIN
+  65  0022              	
+  66  0022  0700     R  	mov a,command	
+  67  0023  0C03        	XOR A,03h			;指令為03h
+  68  0024  390A        	SNZ Z
+  69  0025  2828        	JMP $+3
+  70  0026  2075        	CALL WRITE_HELLO
+  71  0027  2803        	JMP MAIN
+  72  0028              	
+  73  0028              	
+  74  0028  2803        	JMP MAIN
+  75  0029              ;----------------------------------------
+  76  0029              ;	UART Transmitter
+  77  0029              ;----------------------------------------
+  78  0029              UART_WRITE:
+  79  0029  361B        	CLR UART_PINC
+  80  002A              	
+  81  002A  0F08        	MOV A,8
+  82  002B  0080     R  	MOV COUNT,A
+  83  002C  361A        	CLR UART_PIN			;Start bit
+  84  002D  2089        	CALL DELAY		
+  85  002E              	
+  86  002E              	UART_WRITE1:			;data bits
+  87  002E              	
+  88  002E  3C00     R  		SZ UART_DATA.0
+  89  002F  321A        		SET UART_PIN
+  90  0030  3800     R  		SNZ UART_DATA.0
+  91  0031  361A        		CLR UART_PIN
+  92  0032  2089        		CALL DELAY
+  93  0033  1980     R  		RR UART_DATA
+  94  0034  1780     R  		SDZ COUNT 
+  95  0035  282E        		JMP UART_WRITE1
+  96  0036              	
+  97  0036  321A        	SET UART_PIN			;stop bit
+  98  0037  2089        	CALL DELAY	
+  99  0038              	
+ 100  0038  321B        	SET UART_PINC
+ 101  0039              	
+ 102  0039  0003        	RET	
+ 103  003A              ;----------------------------------------
+ 104  003A              ;	UART Receiver 
+ 105  003A              ;----------------------------------------
+ 106  003A              UART_READ:
+ 107  003A  0F08        	MOV A,8
+ 108  003B  0080     R  	MOV COUNT,A
+ 109  003C  2089        	CALL DELAY
+ 110  003D  0F22        	MOV A,34				;使判斷位置為中間值
+ 111  003E  1785        	SDZ ACC
+ 112  003F  283E        	JMP $-1
+ 113  0040              		
+ 114  0040              	UART_READ1:				;DATA
+ 115  0040              		
+ 116  0040  1980     R  		RR UART_DATA		
+ 117  0041  3E1A        		SZ UART_PIN
+"File: 50.asm        Assembler  Version 2.98      Page 3
+
+ 118  0042  3000     R  		SET UART_DATA.7
+ 119  0043  3A1A        		SNZ UART_PIN
+ 120  0044  3400     R  		CLR UART_DATA.7
+ 121  0045  2089        		CALL DELAY
+ 122  0046  1780     R  		SDZ COUNT 
+ 123  0047  2840        		JMP UART_READ1
+ 124  0048              	
+ 125  0048  3A1A        	SNZ UART_PIN			;STOP
+ 126  0049  2848        	JMP $-1		
+ 127  004A              	
+ 128  004A  0003        	RET
+ 129  004B              ;----------------------------------------
+ 130  004B              ;	write loop
+ 131  004B              ;----------------------------------------
+ 132  004B              WRITE_DATA:
+ 133  004B  1D00     R  	TABRD UART_DATA
+ 134  004C  2029        	CALL UART_WRITE
+ 135  004D  1487        	INC TBLP
+ 136  004E              	
+ 137  004E  3D0A        	SZ z				;判斷資料位置是否跨頁
+ 138  004F  1489        	INC TBHP
+ 139  0050              	
+ 140  0050  0707        	MOV A,TBLP				;判斷低8BIT位置是否相同
+ 141  0051  0400     R  	XOR A,END_L	
+ 142  0052  390A        	SNZ Z				
+ 143  0053  284B        	JMP WRITE_DATA
+ 144  0054  0709        	MOV A,TBHP				;相同則判斷高位元
+ 145  0055  0400     R  	XOR A,END_H				;判斷高8BIT位置是否相同
+ 146  0056  390A        	SNZ Z
+ 147  0057  284B        	JMP WRITE_DATA
+ 148  0058  205A        	CALL WRITE_DATA_END	
+ 149  0059  0003        	RET
+ 150  005A              ;----------------------------------------
+ 151  005A              ;	停止訊號
+ 152  005A              ;----------------------------------------
+ 153  005A              WRITE_DATA_END:
+ 154  005A  0F0D        	MOV A,0DH
+ 155  005B  0080     R  	MOV UART_DATA,A
+ 156  005C  2029        	CALL UART_WRITE
+ 157  005D  0F0A        	MOV A,0AH
+ 158  005E  0080     R  	MOV UART_DATA,A
+ 159  005F  2029        	CALL UART_WRITE
+ 160  0060  0003        	RET
+ 161  0061              ;----------------------------------------
+ 162  0061              ;	設定字串位置
+ 163  0061              ;----------------------------------------
+ 164  0061              WRITE_ID:
+ 165  0061  0F00        	MOV A,HIGH ID
+ 166  0062  0089        	MOV TBHP,A
+ 167  0063  0F8D        	MOV A,LOW ID
+ 168  0064  0087        	MOV TBLP,A
+ 169  0065  0F94        	MOV A,LOW ID_END
+ 170  0066  0080     R  	MOV END_L,A
+ 171  0067  0F00        	MOV A,HIGH ID_END
+ 172  0068  0080     R  	MOV END_H,A
+ 173  0069  204B        	CALL WRITE_DATA
+ 174  006A  0003        	RET
+ 175  006B              WRITE_NAME:
+ 176  006B  0F00        	MOV A,HIGH NAME
+ 177  006C  0089        	MOV TBHP,A
+"File: 50.asm        Assembler  Version 2.98      Page 4
+
+ 178  006D  0F94        	MOV A,LOW NAME
+ 179  006E  0087        	MOV TBLP,A
+ 180  006F  0F9B        	MOV A,LOW NAME_END
+ 181  0070  0080     R  	MOV END_L,A
+ 182  0071  0F00        	MOV A,HIGH NAME_END
+ 183  0072  0080     R  	MOV END_H,A
+ 184  0073  204B        	CALL WRITE_DATA
+ 185  0074  0003        	RET
+ 186  0075              WRITE_HELLO:
+ 187  0075  0F00        	MOV A,HIGH HELLO
+ 188  0076  0089        	MOV TBHP,A
+ 189  0077  0F9B        	MOV A,LOW HELLO
+ 190  0078  0087        	MOV TBLP,A
+ 191  0079  0FA0        	MOV A,LOW HELLO_END
+ 192  007A  0080     R  	MOV END_L,A
+ 193  007B  0F00        	MOV A,HIGH HELLO_END
+ 194  007C  0080     R  	MOV END_H,A
+ 195  007D  204B        	CALL WRITE_DATA
+ 196  007E  0003        	RET	
+ 197  007F              WRITE_DAY:
+ 198  007F  0F00        	MOV A,HIGH DAY
+ 199  0080  0089        	MOV TBHP,A
+ 200  0081  0FA0        	MOV A,LOW DAY
+ 201  0082  0087        	MOV TBLP,A
+ 202  0083  0FA9        	MOV A,LOW DAY_END
+ 203  0084  0080     R  	MOV END_L,A
+ 204  0085  0F00        	MOV A,HIGH DAY_END
+ 205  0086  0080     R  	MOV END_H,A
+ 206  0087  204B        	CALL WRITE_DATA
+ 207  0088  0003        	RET		
+ 208  0089              ;----------------------------------------
+ 209  0089              ;	Delay  2+1+(1+2)*67+2+2 = 208
+ 210  0089              ;----------------------------------------
+ 211  0089              DELAY: ; 9600 BAUD = 104.2uS
+ 212  0089  0F43        	MOV A,67
+ 213  008A  1785        	SDZ	ACC
+ 214  008B  288A        	JMP $-1
+ 215  008C  0003        	RET
+ 216  008D              
+ 217  008D              ID:
+ 218  008D  0050 0072   	DC 'Program'
+            006F 0067 0072 0061 006D
+ 219  0094              ID_END:
+ 220  0094              
+ 221  0094              NAME:
+ 222  0094  0031 0031   	DC '1110507'
+            0031 0030 0035 0030 0037
+ 223  009B              NAME_END:
+ 224  009B              
+ 225  009B              HELLO:
+ 226  009B  0048 0045   	DC 'HELLO'
+            004C 004C 004F
+ 227  00A0              HELLO_END:
+ 228  00A0              day:
+ 229  00A0  0031 0030   	DC '104/01/12'
+            0034 002F 0030 0031 002F 0031 0032
+ 230  00A9              day_END:
+ 231  00A9              
+ 232  00A9              	END
+
+"File: 50.asm        Assembler  Version 2.98      Page 5
+
+
+        0 Errors, 0 Warnings

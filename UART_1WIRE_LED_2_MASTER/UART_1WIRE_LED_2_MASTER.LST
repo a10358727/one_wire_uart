@@ -1,0 +1,245 @@
+"File: UART_1WIRE_LED_2_MASTER.asm  Assembler  Version 2.98      Page 1
+
+
+   1  0000              include HT66F2390.inc
+
+
+   2  0000              
+   3  0000              ds	.section	'data'
+   4  0000              
+   5  0000              UART_PIN EQU PA4
+   6  0000              UART_PINC EQU PAC4
+   7  0000              UART_PINPU EQU PAPU4
+   8  0000              
+   9  0000              SW0 EQU PA1
+  10  0000              SW0C EQU PAC1
+  11  0000              SW0PU EQU PAPU1
+  12  0000              
+  13  0000              SW1 EQU PB1
+  14  0000              SW1C EQU PBC1
+  15  0000              SW1PU EQU PBPU1
+  16  0000              
+  17  0000  00          UART_DATA DB ?
+  18  0001  00          CMD DB ?
+  19  0002  00          COUNT DB ?
+  20  0003  00          ack DB ?
+  21  0004  00          mode db ?
+  22  0005              
+  23  0005  00          DEL1 DB ?
+  24  0006  00          DEL2 DB ?
+  25  0007  00          DEL3 DB ?
+  26  0008              
+  27  0008              
+  28  0008              
+  29  0008              ROMBANK 0 cs
+  30  0000              cs	.section	at  000h	'code'
+  31  0000              	ORG 000H
+  32  0000  2801        	JMP INIT
+  33  0001              	
+  34  0001              INIT:
+  35  0001  0FAF        	MOV A,10101111B
+  36  0002  00BE        	MOV WDTC,A
+  37  0003  3215        	SET UART_PINC			;輸入
+  38  0004  3216        	SET UART_PINPU	
+  39  0005  1F00     R  	clr mode				;設定模式0代表MASTER發送指令 1代表MASTER停止發送指令
+  40  0006              
+  41  0006  3095        	SET SW0C
+  42  0007  3096        	SET SW0PU
+  43  0008  3099        	SET SW1C
+  44  0009  309A        	SET SW1PU
+  45  000A              	
+  46  000A              MAIN:
+  47  000A  1080     R  	sz mode
+  48  000B  2875        	jmp CHANGE_MASTER
+  49  000C              	
+  50  000C  0FC1        	MOV A,0C1H
+  51  000D  0080     R  	MOV CMD,A
+  52  000E  202D        	CALL SEND_CMD
+  53  000F  2066        	CALL DELAY_1000
+  54  0010  0FD1        	MOV A,0D1H
+  55  0011  0080     R  	MOV CMD,A
+  56  0012  202D        	CALL SEND_CMD
+  57  0013  2066        	CALL DELAY_1000
+"File: UART_1WIRE_LED_2_MASTER.asm  Assembler  Version 2.98      Page 2
+
+  58  0014  0FE1        	MOV A,0E1H
+  59  0015  0080     R  	MOV CMD,A
+  60  0016  202D        	CALL SEND_CMD
+  61  0017  2066        	CALL DELAY_1000
+  62  0018  0FF1        	MOV A,0F1H
+  63  0019  0080     R  	MOV CMD,A
+  64  001A  202D        	CALL SEND_CMD
+  65  001B  2066        	CALL DELAY_1000
+  66  001C              
+  67  001C  0FC2        	MOV A,0C2H
+  68  001D  0080     R  	MOV CMD,A
+  69  001E  202D        	CALL SEND_CMD
+  70  001F  2066        	CALL DELAY_1000
+  71  0020  0FD2        	MOV A,0D2H
+  72  0021  0080     R  	MOV CMD,A
+  73  0022  202D        	CALL SEND_CMD
+  74  0023  2066        	CALL DELAY_1000
+  75  0024  0FE2        	MOV A,0E2H
+  76  0025  0080     R  	MOV CMD,A
+  77  0026  202D        	CALL SEND_CMD
+  78  0027  2066        	CALL DELAY_1000
+  79  0028  0FF2        	MOV A,0F2H
+  80  0029  0080     R  	MOV CMD,A
+  81  002A  202D        	CALL SEND_CMD
+  82  002B  2066        	CALL DELAY_1000
+  83  002C              	
+  84  002C  280A        	JMP MAIN
+  85  002D              ;
+  86  002D              SEND_CMD:
+  87  002D  0700     R  	MOV A,CMD
+  88  002E  0080     R  	MOV UART_DATA,A
+  89  002F  203F        	CALL UART_WRITE
+  90  0030  1F00     R  	CLR ACK
+  91  0031  1F00     R  	clr DEL1
+  92  0032              WAIT_ACK:	
+  93  0032  3A14        	SnZ UART_PIN					;接收資料並判斷與發送的數值是否成補數
+  94  0033  2837        	JMP GET_ACK
+  95  0034  1780     R  	sdz DEL1
+  96  0035  2832        	jmp WAIT_ACK
+  97  0036  283E        	jmp SEND_CMD_END
+  98  0037              GET_ACK:
+  99  0037  2050        	CALL UART_READ
+ 100  0038  0700     R  	MOV A,UART_DATA
+ 101  0039  0105        	CPLA ACC
+ 102  003A  0400     R  	XOR A,CMD
+ 103  003B  390A        	SNZ Z
+ 104  003C  283E        	JMP SEND_CMD_END
+ 105  003D  1F80     R  	SET ACK
+ 106  003E              	
+ 107  003E              SEND_CMD_END:
+ 108  003E  0003        	RET
+ 109  003F              ;----------------------------------------
+ 110  003F              ;	UART Transmitter
+ 111  003F              ;----------------------------------------
+ 112  003F              UART_WRITE:
+ 113  003F  3615        	CLR UART_PINC			;開始傳輸將接腳設為output
+ 114  0040  0F08        	MOV A,8
+ 115  0041  0080     R  	MOV COUNT,A
+ 116  0042  3614        	CLR UART_PIN			;Start bit
+ 117  0043  2062        	CALL DELAY		
+"File: UART_1WIRE_LED_2_MASTER.asm  Assembler  Version 2.98      Page 3
+
+ 118  0044              	
+ 119  0044              	UART_WRITE1:			;data bits	資料透過不斷右移來傳輸
+ 120  0044  3C00     R  		SZ UART_DATA.0
+ 121  0045  3214        		SET UART_PIN
+ 122  0046  3800     R  		SNZ UART_DATA.0
+ 123  0047  3614        		CLR UART_PIN
+ 124  0048  2062        		CALL DELAY
+ 125  0049  1980     R  		RR UART_DATA
+ 126  004A  1780     R  		SDZ COUNT 
+ 127  004B  2844        		JMP UART_WRITE1
+ 128  004C  3214        	SET UART_PIN			;stop bit
+ 129  004D  2062        	CALL DELAY
+ 130  004E  3215        	SET UART_PINC			;傳輸結束將接腳設為input
+ 131  004F  0003        	RET	
+ 132  0050              ;----------------------------------------
+ 133  0050              ;	UART Receiver 
+ 134  0050              ;----------------------------------------
+ 135  0050              UART_READ:
+ 136  0050  0F08        	MOV A,8
+ 137  0051  0080     R  	MOV COUNT,A
+ 138  0052  2062        	CALL DELAY			;START
+ 139  0053              	
+ 140  0053  0F14        	MOV A,20
+ 141  0054  1785        	SDZ ACC
+ 142  0055  2854        	JMP $-1
+ 143  0056              	
+ 144  0056              	UART_READ1:			;DATA
+ 145  0056  1980     R  		RR UART_DATA	
+ 146  0057  3E14        		SZ UART_PIN
+ 147  0058  3000     R  		SET UART_DATA.7
+ 148  0059  3A14        		SNZ UART_PIN
+ 149  005A  3400     R  		CLR UART_DATA.7
+ 150  005B  2062        		CALL DELAY
+ 151  005C  1780     R  		SDZ COUNT 
+ 152  005D  2856        		JMP UART_READ1
+ 153  005E              
+ 154  005E              	
+ 155  005E  3A14        	SNZ UART_PIN	;STOP
+ 156  005F  285E        	JMP $-1		
+ 157  0060  2062        	CALL DELAY			
+ 158  0061  0003        	RET
+ 159  0062              
+ 160  0062              ;----------------------------------------
+ 161  0062              ;	Delay  2+1+(1+2)*66+2+2 = 205
+ 162  0062              ;----------------------------------------
+ 163  0062              DELAY: ; 9600 BAUD = 104.2uS
+ 164  0062  0F41        	MOV A,65
+ 165  0063  1785        	SDZ	ACC
+ 166  0064  2863        	JMP $-1
+ 167  0065  0003        	RET
+ 168  0066              ;----------------------------------------
+ 169  0066              ;	Delay  1000mS
+ 170  0066              ;----------------------------------------	
+ 171  0066              DELAY_1000:
+ 172  0066  0F32        	MOV A,50
+ 173  0067  0080     R  	MOV DEL1,A
+ 174  0068              DEL_1:
+ 175  0068  0F3C        	MOV A,60
+ 176  0069  0080     R  	MOV DEL2,A
+ 177  006A              DEL_2:
+"File: UART_1WIRE_LED_2_MASTER.asm  Assembler  Version 2.98      Page 4
+
+ 178  006A  0F6E        	MOV A,110
+ 179  006B  0080     R  	MOV DEL3,A
+ 180  006C              DEL_3:
+ 181  006C  3894        	SNZ SW0
+ 182  006D  1F80     R  	SET mode
+ 183  006E  1780     R  	SDZ DEL3
+ 184  006F  286C        	JMP DEL_3
+ 185  0070  1780     R  	SDZ DEL2
+ 186  0071  286A        	JMP DEL_2
+ 187  0072  1780     R  	SDZ DEL1
+ 188  0073  2868        	JMP DEL_1
+ 189  0074  0003        	RET 	
+ 190  0075              
+ 191  0075              
+ 192  0075              CHANGE_MASTER:
+ 193  0075  0FC3        	MOV A,0C3H
+ 194  0076  0080     R  	MOV CMD,A
+ 195  0077  202D        	CALL SEND_CMD
+ 196  0078  1080     R  	SZ ACK 
+ 197  0079  2889        	JMP WAIT_SW1
+ 198  007A  0FD3        	MOV A,0D3H
+ 199  007B  0080     R  	MOV CMD,A
+ 200  007C  202D        	CALL SEND_CMD
+ 201  007D  1080     R  	SZ ACK 
+ 202  007E  2889        	JMP WAIT_SW1
+ 203  007F  0FE3        	MOV A,0E3H
+ 204  0080  0080     R  	MOV CMD,A
+ 205  0081  202D        	CALL SEND_CMD
+ 206  0082  1080     R  	SZ ACK 
+ 207  0083  2889        	JMP WAIT_SW1
+ 208  0084  0FF3        	MOV A,0F3H
+ 209  0085  0080     R  	MOV CMD,A
+ 210  0086  202D        	CALL SEND_CMD
+ 211  0087  1080     R  	SZ ACK 
+ 212  0088  2889        	JMP WAIT_SW1
+ 213  0089              WAIT_SW1: 
+ 214  0089  3C98        	SZ SW1
+ 215  008A  2889        	JMP $-1
+ 216  008B  1480     R  	INC CMD
+ 217  008C  202D        	CALL SEND_CMD
+ 218  008D  1E00     R  	SNZ ack
+ 219  008E  288C        	JMP $-2
+ 220  008F              	
+ 221  008F  3E14        	SZ UART_PIN				;等待SLAVE完成指令
+ 222  0090  288F        	JMP $-1
+ 223  0091  2050        	CALL UART_READ
+ 224  0092  0700     R  	MOV A,UART_DATA
+ 225  0093  0C55        	XOR A,055H
+ 226  0094  390A        	SNZ Z
+ 227  0095  288F        	JMP $-6
+ 228  0096  1F00     R  	clr mode
+ 229  0097  280A        	jmp MAIN
+ 230  0098              	
+ 231  0098              	end
+
+
+        0 Errors, 0 Warnings

@@ -1,0 +1,793 @@
+"File: UART_1WIRE_MASTER_2.asm  Assembler  Version 2.98      Page 1
+
+
+   1  0000              include HT66F2390.inc
+
+
+   2  0000              
+   3  0000              ds	.section	'data'
+   4  0000              
+   5  0000              UART_PIN EQU PA4
+   6  0000              UART_PINC EQU PAC4
+   7  0000              UART_PINPU EQU PAPU4
+   8  0000              
+   9  0000              KEY_PORT EQU PC
+  10  0000              KEY_PORTC EQU PCC
+  11  0000              KEY_PORTPU EQU PCPU
+  12  0000              
+  13  0000              SDA   EQU PF6
+  14  0000              SDAC  EQU PFC6
+  15  0000              SDAPU EQU PFPU6
+  16  0000              SCL   EQU PF7
+  17  0000              SCLC  EQU PFC7
+  18  0000              SCLPU EQU PFPU7
+  19  0000              
+  20  0000  00          i2c_data db ?
+  21  0001  00          i2c_ack DB ?
+  22  0002  00          i2c_count DB ?
+  23  0003  00          I2C_COMMAND DB ?
+  24  0004  00          I2C_DATA_TOTAL DB ?
+  25  0005  00          I2C_BUSY DB ?
+  26  0006              
+  27  0006  00          UART_DATA DB ?
+  28  0007  00          data_count db ?
+  29  0008  00          CMD DB ?
+  30  0009  00          COUNT DB ?
+  31  000A  00          COUNT1 DB ?
+  32  000B  00          END_L DB ?
+  33  000C  00          END_H DB ?
+  34  000D              
+  35  000D  00          KEY DB ?
+  36  000E              
+  37  000E  00          DEL1 DB ?
+  38  000F  00          DEL2 DB ?
+  39  0010  00          DEL3 DB ?
+  40  0011              
+  41  0011  0014[       BUFFER DB 20 DUP (?)
+            00
+            ]
+  42  0025  0014[       BUFFER1 DB 20 DUP (?)
+            00
+            ]
+  43  0039              
+  44  0039              ROMBANK 0 cs
+  45  0000              cs	.section	at  000h	'code'
+  46  0000              INIT:
+  47  0000  0FAF        	MOV A,10101111B
+  48  0001  00BE        	MOV WDTC,A
+  49  0002              	
+  50  0002  21CB        	call i2c_init
+  51  0003              	
+  52  0003  3215        	SET UART_PINC			;輸入
+  53  0004  3216        	SET UART_PINPU	
+"File: UART_1WIRE_MASTER_2.asm  Assembler  Version 2.98      Page 2
+
+  54  0005              	
+  55  0005  0FF0        	MOV A,11110000B			;設定按鍵的輸入輸出
+  56  0006  009C        	MOV KEY_PORTC,A
+  57  0007  009D        	MOV KEY_PORTPU,A
+  58  0008              	
+  59  0008  21B7        	CALL CLEAR_BUFFER	;CLEAR BUFFER1 DATA
+  60  0009  21C1        	call CLEAR_BUFFER1
+  61  000A  2163        	CALL eDISPLAY_CLEAR_ALL
+  62  000B  20E7        	Call eDISPLAY_ASC_2
+  63  000C  20C2        	CALL eDISPLAY_ASC_DATA
+  64  000D              MAIN:
+  65  000D  2038        	CALL READ_KEY			;呼叫副程式判斷是否有按下按鈕
+  66  000E  0F10        	MOV A,16
+  67  000F  0400     R  	XOR A,KEY
+  68  0010  3D0A        	SZ Z
+  69  0011  280D        	JMP MAIN
+  70  0012  21C1        	call CLEAR_BUFFER1
+  71  0013  0700     R  	MOV A,KEY				;將按鍵數值轉換成我們要發送的數值
+  72  0014  207D        	CALL TRANS_CMD
+  73  0015  0080     R  	MOV CMD,A
+  74  0016  0080     R  	MOV UART_DATA,A
+  75  0017  204D        	CALL UART_WRITE
+  76  0018              	
+  77  0018  3E14        	SZ UART_PIN				;接收資料並判斷與發送的數值是否成補數
+  78  0019  2818        	JMP $-1
+  79  001A  205E        	CALL UART_READ
+  80  001B  0700     R  	MOV A,UART_DATA
+  81  001C  0105        	CPLA ACC
+  82  001D  0400     R  	XOR A,CMD
+  83  001E  390A        	SNZ Z
+  84  001F  280D        	JMP MAIN
+  85  0020              	
+  86  0020  0F00     R  	MOV A,HIGH OFFSET BUFFER
+  87  0021  0084        	MOV MP1H,A
+  88  0022  0F00     R  	MOV A,LOW OFFSET BUFFER 
+  89  0023  0083        	MOV MP1L,A
+  90  0024              REC_LOOP:						;將接收到的資料存放於BUFFER，0D0A 為停止訊號
+  91  0024  3E14        	SZ UART_PIN
+  92  0025  2824        	JMP $-1
+  93  0026  205E        	CALL UART_READ
+  94  0027  0700     R  	MOV A,UART_DATA
+  95  0028  0082        	MOV IAR1,A
+  96  0029  0C0A        	XOR A,0AH 
+  97  002A  3D0A        	SZ Z
+  98  002B  282E        	JMP $+3
+  99  002C  1483        	INC MP1L
+ 100  002D  2824        	JMP REC_LOOP
+ 101  002E  0702        	MOV A,IAR1
+ 102  002F  0C0D        	XOR A,0DH
+ 103  0030  390A        	SNZ Z
+ 104  0031  2834        	JMP $+3
+ 105  0032  1483        	INC MP1L
+ 106  0033  2824        	JMP REC_LOOP
+ 107  0034              	
+ 108  0034              	
+ 109  0034  20CE        	CALL eDISPLAY_ASC_CMD
+ 110  0035  209F        	CALL eDISPLAY_ASC_UART_DATA
+ 111  0036              	
+ 112  0036  2092        	CALL DELAY_1000
+ 113  0037  280D        	JMP MAIN
+"File: UART_1WIRE_MASTER_2.asm  Assembler  Version 2.98      Page 3
+
+ 114  0038              
+ 115  0038              ;----------------------------------------
+ 116  0038              ;	SCAN KEY
+ 117  0038              ;----------------------------------------
+ 118  0038              READ_KEY:
+ 119  0038  1F9B        	SET KEY_PORT
+ 120  0039  1F00     R  	CLR KEY
+ 121  003A  0F04        	MOV A,04
+ 122  003B  0080     R  	MOV COUNT,A
+ 123  003C  340A        	CLR C
+ 124  003D              SCAN_KEY:
+ 125  003D  1A9B        	RLC KEY_PORT
+ 126  003E  3A1B        	SNZ KEY_PORT.4
+ 127  003F  284C        	JMP END_KEY
+ 128  0040  1480     R  	INC KEY
+ 129  0041  3A9B        	SNZ KEY_PORT.5
+ 130  0042  284C        	JMP END_KEY
+ 131  0043  1480     R  	INC KEY
+ 132  0044  3B1B        	SNZ KEY_PORT.6
+ 133  0045  284C        	JMP END_KEY
+ 134  0046  1480     R  	INC KEY
+ 135  0047  3B9B           	SNZ KEY_PORT.7
+ 136  0048  284C        	JMP END_KEY
+ 137  0049  1480     R  	INC KEY
+ 138  004A  1780     R  	SDZ COUNT
+ 139  004B  283D        	JMP SCAN_KEY
+ 140  004C              END_KEY:	
+ 141  004C  0003        	RET	
+ 142  004D              
+ 143  004D              ;----------------------------------------
+ 144  004D              ;	UART Transmitter
+ 145  004D              ;----------------------------------------
+ 146  004D              UART_WRITE:
+ 147  004D  3615        	CLR UART_PINC			;開始傳輸將接腳設為output
+ 148  004E              	
+ 149  004E  0F08        	MOV A,8
+ 150  004F  0080     R  	MOV COUNT,A
+ 151  0050  3614        	CLR UART_PIN			;Start bit
+ 152  0051  208E        	CALL DELAY		
+ 153  0052              	
+ 154  0052              	UART_WRITE1:			;data bits	資料透過不斷右移來傳輸
+ 155  0052              	
+ 156  0052  3C00     R  		SZ UART_DATA.0
+ 157  0053  3214        		SET UART_PIN
+ 158  0054  3800     R  		SNZ UART_DATA.0
+ 159  0055  3614        		CLR UART_PIN
+ 160  0056  208E        		CALL DELAY
+ 161  0057  1980     R  		RR UART_DATA
+ 162  0058  1780     R  		SDZ COUNT 
+ 163  0059  2852        		JMP UART_WRITE1
+ 164  005A              	
+ 165  005A  3214        	SET UART_PIN			;stop bit
+ 166  005B  208E        	CALL DELAY
+ 167  005C              	
+ 168  005C  3215        	SET UART_PINC			;傳輸結束將接腳設為input
+ 169  005D              	
+ 170  005D  0003        	RET	
+ 171  005E              ;----------------------------------------
+ 172  005E              ;	UART Receiver 
+ 173  005E              ;----------------------------------------
+"File: UART_1WIRE_MASTER_2.asm  Assembler  Version 2.98      Page 4
+
+ 174  005E              UART_READ:
+ 175  005E  0F08        	MOV A,8
+ 176  005F  0080     R  	MOV COUNT,A
+ 177  0060  208E        	CALL DELAY			;START
+ 178  0061              	
+ 179  0061  0F14        	MOV A,20
+ 180  0062  1785        	SDZ ACC
+ 181  0063  2862        	JMP $-1
+ 182  0064              	
+ 183  0064              	UART_READ1:			;DATA
+ 184  0064  1980     R  		RR UART_DATA	
+ 185  0065  3E14        		SZ UART_PIN
+ 186  0066  3000     R  		SET UART_DATA.7
+ 187  0067  3A14        		SNZ UART_PIN
+ 188  0068  3400     R  		CLR UART_DATA.7
+ 189  0069  208E        		CALL DELAY
+ 190  006A  1780     R  		SDZ COUNT 
+ 191  006B  2864        		JMP UART_READ1
+ 192  006C              
+ 193  006C  3A14        	SNZ UART_PIN	;STOP
+ 194  006D  286C        	JMP $-1		
+ 195  006E  0003        	RET
+ 196  006F              ;----------------------------------------
+ 197  006F              ;	write loop 傳送字串
+ 198  006F              ;----------------------------------------
+ 199  006F              WRITE:
+ 200  006F  1D00     R  	TABRD UART_DATA
+ 201  0070  204D        	CALL UART_WRITE
+ 202  0071  1487        	INC TBLP
+ 203  0072              	
+ 204  0072  1E07        	SNZ TBLP			;判斷資料位置是否跨頁
+ 205  0073  1489        	INC TBHP
+ 206  0074              	
+ 207  0074  0707        	MOV A,TBLP			;判斷低8BIT位置是否相同
+ 208  0075  0400     R  	XOR A,END_L	
+ 209  0076  390A        	SNZ Z				
+ 210  0077  286F        	JMP WRITE
+ 211  0078  0709        	MOV A,TBHP			;相同則判斷高位元
+ 212  0079  0400     R  	XOR A,END_H			;判斷高8BIT位置是否相同
+ 213  007A  390A        	SNZ Z
+ 214  007B  286F        	JMP WRITE
+ 215  007C  0003        	RET
+ 216  007D              
+ 217  007D              ;----------------------------------------
+ 218  007D              ;	ADDRESS COMMAND
+ 219  007D              ;----------------------------------------
+ 220  007D              TRANS_CMD:
+ 221  007D  0386        	ADDM A,PCL
+ 222  007E  09F0        	RET A,0F0H
+ 223  007F  09F1        	RET A,0F1H
+ 224  0080  09F2        	RET A,0F2H
+ 225  0081  09F3        	RET A,0F3H
+ 226  0082  09E0        	RET A,0E0H
+ 227  0083  09E1        	RET A,0E1H
+ 228  0084  09E2        	RET A,0E2H
+ 229  0085  09E3        	RET A,0E3H
+ 230  0086  09D0        	RET A,0D0H
+ 231  0087  09D1        	RET A,0D1H
+ 232  0088  09D2        	RET A,0D2H
+ 233  0089  09D3        	RET A,0D3H
+"File: UART_1WIRE_MASTER_2.asm  Assembler  Version 2.98      Page 5
+
+ 234  008A  09C0        	RET A,0C0H
+ 235  008B  09C1        	RET A,0C1H
+ 236  008C  09C2        	RET A,0C2H
+ 237  008D  09C3        	RET A,0C3H
+ 238  008E              
+ 239  008E              ;----------------------------------------
+ 240  008E              ;	Delay  2+1+(1+2)*66+2+2 = 205
+ 241  008E              ;----------------------------------------
+ 242  008E              DELAY: ; 9600 BAUD = 104.2uS
+ 243  008E  0F41        	MOV A,65
+ 244  008F  1785        	SDZ	ACC
+ 245  0090  288F        	JMP $-1
+ 246  0091  0003        	RET
+ 247  0092              ;----------------------------------------
+ 248  0092              ;	Delay  1000mS
+ 249  0092              ;----------------------------------------	
+ 250  0092              DELAY_1000:
+ 251  0092  0F32        	MOV A,50
+ 252  0093  0080     R  	MOV DEL1,A
+ 253  0094              DEL_1:
+ 254  0094  0F3C        	MOV A,60
+ 255  0095  0080     R  	MOV DEL2,A
+ 256  0096              DEL_2:
+ 257  0096  0F6E        	MOV A,110
+ 258  0097  0080     R  	MOV DEL3,A
+ 259  0098              DEL_3:
+ 260  0098  1780     R  	SDZ DEL3
+ 261  0099  2898        	JMP DEL_3
+ 262  009A  1780     R  	SDZ DEL2
+ 263  009B  2896        	JMP DEL_2
+ 264  009C  1780     R  	SDZ DEL1
+ 265  009D  2894        	JMP DEL_1
+ 266  009E  0003        	RET 	
+ 267  009F              
+ 268  009F              ;*******************************************************************************
+ 269  009F              ;   ASCII eDISPLAY 
+ 270  009F              ;
+ 271  009F              ;	COLOR: 	WHITE=0FFFFH,BLACK=0000H,RED=0F800H,GREEN=07E0H,
+ 272  009F              ;			BLUE=001FH,YELLOW=0FFE0H,MAGENTA=0F81FH,CYANH=7FFFH  
+ 273  009F              ;*******************************************************************************
+ 274  009F              eDISPLAY_ASC_UART_DATA:
+ 275  009F              	;CALL eDISPLAY_CLEAR_1
+ 276  009F  0F14        	MOV A,20				;X	0-128
+ 277  00A0  0080     R  	MOV BUFFER1[0],A
+ 278  00A1  0F3C        	MOV A,60				;Y  0-128
+ 279  00A2  0080     R  	MOV BUFFER1[1],A
+ 280  00A3  0F00        	MOV A,00H				;COLOR1H ?r??
+ 281  00A4  0080     R  	MOV BUFFER1[2],A
+ 282  00A5  0F00        	MOV A,00H				;COLOR1L 
+ 283  00A6  0080     R  	MOV BUFFER1[3],A
+ 284  00A7  0FFF        	MOV A,0ffH				;COLOR2H ?I??
+ 285  00A8  0080     R  	MOV BUFFER1[4],A
+ 286  00A9  0FFF        	MOV A,0fFH				;COLOR2L 
+ 287  00AA  0080     R  	MOV BUFFER1[5],A
+ 288  00AB  214F        	CALL DATA_LEN		
+ 289  00AC  0700     R  	MOV A,I2C_DATA_TOTAL
+ 290  00AD  0080     R  	MOV COUNT,A
+ 291  00AE  0F00     R  	MOV A,HIGH OFFSET BUFFER
+ 292  00AF  0084        	MOV MP1H,A
+ 293  00B0  0F00     R  	MOV A,LOW OFFSET BUFFER 
+"File: UART_1WIRE_MASTER_2.asm  Assembler  Version 2.98      Page 6
+
+ 294  00B1  0083        	MOV MP1L,A
+ 295  00B2  0F00     R  	MOV A,HIGH OFFSET BUFFER1
+ 296  00B3  008E        	MOV MP2H,A
+ 297  00B4  0F00     R  	MOV A,LOW OFFSET BUFFER1
+ 298  00B5  008D        	MOV MP2L,A
+ 299  00B6              	
+ 300  00B6  0F06        	MOV A,6
+ 301  00B7  038D        	ADDM A,MP2L
+ 302  00B8              	X:
+ 303  00B8  0702        	MOV A,IAR1
+ 304  00B9  008C        	MOV IAR2,A
+ 305  00BA  1483        	INC MP1L
+ 306  00BB  148D        	INC MP2L
+ 307  00BC  1780     R  	SDZ COUNT
+ 308  00BD  28B8        	JMP X
+ 309  00BE  0F14        	MOV A,20
+ 310  00BF  0080     R  	MOV  I2C_DATA_TOTAL,A
+ 311  00C0  2146        	CALL I2C_ASC
+ 312  00C1  0003        	RET
+ 313  00C2              eDISPLAY_ASC_DATA:
+ 314  00C2  21B7        	CALL CLEAR_BUFFER
+ 315  00C3  0F00        	MOV A,HIGH  ASC_WORD_1
+ 316  00C4  0089        	MOV TBHP,A
+ 317  00C5  0FFF        	MOV A,LOW  ASC_WORD_1
+ 318  00C6  0087        	MOV TBLP,A
+ 319  00C7  0F01        	MOV A,HIGH END_ASC_WORD_1
+ 320  00C8  0080     R  	MOV END_H,A	
+ 321  00C9  0F0A        	MOV A,LOW END_ASC_WORD_1
+ 322  00CA  0080     R  	MOV END_L,A
+ 323  00CB  2133        	CALL ASC_LOOP	
+ 324  00CC  2146        	CALL I2C_ASC
+ 325  00CD              	
+ 326  00CD  0003        	RET
+ 327  00CE              	
+ 328  00CE              
+ 329  00CE              eDISPLAY_ASC_CMD:
+ 330  00CE  20F3        	CALL eDISPLAY_ASC_3
+ 331  00CF  21B7        	CALL CLEAR_BUFFER
+ 332  00D0  0F07        	mov a,7
+ 333  00D1  0080     R  	mov I2C_DATA_TOTAL,A
+ 334  00D2  0F3C        	MOV A,60				;X	0-128
+ 335  00D3  0080     R  	MOV BUFFER1[0],A
+ 336  00D4  0F16        	MOV A,22				;Y  0-128
+ 337  00D5  0080     R  	MOV BUFFER1[1],A
+ 338  00D6  0F00        	MOV A,00H				;COLOR1H ?r??
+ 339  00D7  0080     R  	MOV BUFFER1[2],A
+ 340  00D8  0F00        	MOV A,00H				;COLOR1L 
+ 341  00D9  0080     R  	MOV BUFFER1[3],A
+ 342  00DA  0FFF        	MOV A,0ffH				;COLOR2H ?I??
+ 343  00DB  0080     R  	MOV BUFFER1[4],A
+ 344  00DC  0FFF        	MOV A,0fFH				;COLOR2L 
+ 345  00DD  0080     R  	MOV BUFFER1[5],A
+ 346  00DE  0700     R  	MOV A,CMD
+ 347  00DF  0EF0        	AND A,11110000B
+ 348  00E0  1185        	SWAP ACC
+ 349  00E1  0185        	CPL ACC
+ 350  00E2  0E0F        	AND A,00001111B
+ 351  00E3  2122        	CALL TRANS_slave
+ 352  00E4  0080     R  	MOV BUFFER1[6],A
+ 353  00E5  2146        	CALL I2C_ASC
+"File: UART_1WIRE_MASTER_2.asm  Assembler  Version 2.98      Page 7
+
+ 354  00E6  0003        	RET
+ 355  00E7              eDISPLAY_ASC_2:
+ 356  00E7  21B7        	CALL CLEAR_BUFFER
+ 357  00E8  0F01        	MOV A,HIGH  ASC_WORD_2
+ 358  00E9  0089        	MOV TBHP,A
+ 359  00EA  0F0A        	MOV A,LOW  ASC_WORD_2
+ 360  00EB  0087        	MOV TBLP,A
+ 361  00EC  0F01        	MOV A,HIGH END_ASC_WORD_2
+ 362  00ED  0080     R  	MOV END_H,A	
+ 363  00EE  0F17        	MOV A,LOW END_ASC_WORD_2
+ 364  00EF  0080     R  	MOV END_L,A
+ 365  00F0              	
+ 366  00F0  2133        	CALL ASC_LOOP
+ 367  00F1              			
+ 368  00F1  2146        	CALL I2C_ASC
+ 369  00F2  0003        	ret
+ 370  00F3              eDISPLAY_ASC_3:
+ 371  00F3  21B7        	CALL CLEAR_BUFFER
+ 372  00F4  0F01        	MOV A,HIGH  ASC_WORD_3
+ 373  00F5  0089        	MOV TBHP,A
+ 374  00F6  0F17        	MOV A,LOW  ASC_WORD_3
+ 375  00F7  0087        	MOV TBLP,A
+ 376  00F8  0F01        	MOV A,HIGH END_ASC_WORD_3
+ 377  00F9  0080     R  	MOV END_H,A	
+ 378  00FA  0F22        	MOV A,LOW END_ASC_WORD_3
+ 379  00FB  0080     R  	MOV END_L,A
+ 380  00FC              	
+ 381  00FC  2133        	CALL ASC_LOOP
+ 382  00FD              			
+ 383  00FD  2146        	CALL I2C_ASC
+ 384  00FE  0003        	ret
+ 385  00FF              ASC_WORD_1:
+ 386  00FF  0004 0028   	DC 04,40,00H,00H,0FFH,0FFH		; X,Y,COLOR1H,COLOR1L,COLOR2H,COLOR2L
+            0000 0000 00FF 00FF
+ 387  0105  0044 0041   	DC 'DATA:'
+            0054 0041 003A
+ 388  010A              END_ASC_WORD_1:	
+ 389  010A              ASC_WORD_2: 
+ 390  010A  0004 0004   	Dc 04,04,00H,00H,0FFH,0FFH		; X,Y,COLOR1H,COLOR1L,COLOR2H,COLOR2L
+            0000 0000 00FF 00FF
+ 391  0110  0044 0065   	DC 'Device:'
+            0076 0069 0063 0065 003A
+ 392  0117              END_ASC_WORD_2:	
+ 393  0117              ASC_WORD_3: 
+ 394  0117  0014 0016   	Dc 20,22,00H,00H,0FFH,0FFH		; X,Y,COLOR1H,COLOR1L,COLOR2H,COLOR2L
+            0000 0000 00FF 00FF
+ 395  011D  0053 006C   	DC 'Slave'
+            0061 0076 0065
+ 396  0122              END_ASC_WORD_3:	
+ 397  0122              TRANS_slave:
+ 398  0122  0386        	ADDM A,PCL
+ 399  0123  0930        	RET A,'0'
+ 400  0124  0931        	RET A,'1'
+ 401  0125  0932        	RET A,'2'
+ 402  0126  0933        	RET A,'3'
+ 403  0127  0934        	RET A,'4'
+ 404  0128  0935        	RET A,'5'
+ 405  0129  0936        	RET A,'6'
+ 406  012A  0937        	RET A,'7'
+ 407  012B  0938        	RET A,'8'
+"File: UART_1WIRE_MASTER_2.asm  Assembler  Version 2.98      Page 8
+
+ 408  012C  0939        	RET A,'9'
+ 409  012D  0941        	RET A,'A'
+ 410  012E  0942        	RET A,'B'
+ 411  012F  0943        	RET A,'C'
+ 412  0130  0944        	RET A,'D'
+ 413  0131  0945        	RET A,'E'
+ 414  0132  0946        	RET A,'F'
+ 415  0133              
+ 416  0133              ASC_LOOP:
+ 417  0133  1F00     R  	clr I2C_DATA_TOTAL
+ 418  0134  21B7        	CALL CLEAR_BUFFER
+ 419  0135  0F00     R  	MOV A,OFFSET BUFFER1
+ 420  0136  0081        	MOV MP0,A
+ 421  0137              	ASC_L1:
+ 422  0137  1D00        		TABRD IAR0
+ 423  0138  1481        		INC MP0
+ 424  0139  1480     R  		inc I2C_DATA_TOTAL
+ 425  013A              		
+ 426  013A  1487        		INC TBLP
+ 427  013B  1E07        		SNZ TBLP			
+ 428  013C  1489        		INC TBHP
+ 429  013D              		
+ 430  013D  0707        		MOV A,TBLP				
+ 431  013E  0400     R  		XOR A,END_L	
+ 432  013F  390A        		SNZ Z				
+ 433  0140  2937        		JMP ASC_L1
+ 434  0141  0709        		MOV A,TBHP				
+ 435  0142  0400     R  		XOR A,END_H				
+ 436  0143  390A        		SNZ Z
+ 437  0144  2937        		JMP ASC_L1
+ 438  0145  0003        	RET
+ 439  0146              I2C_ASC:
+ 440  0146  2182        	CALL I2C_CHECK_BUSY
+ 441  0147  0FAA        	MOV A,0AAH
+ 442  0148  0400     R  	XOR A,I2C_BUSY
+ 443  0149  390A        	SNZ Z
+ 444  014A  2946        	JMP I2C_ASC
+ 445  014B              	
+ 446  014B  0F01        	MOV A,01H
+ 447  014C  0080     R  	MOV I2C_COMMAND,A
+ 448  014D              	
+ 449  014D  218C        	CALL i2c_write_data
+ 450  014E  0003        	RET
+ 451  014F              
+ 452  014F              DATA_LEN:
+ 453  014F  0F00     R  	MOV A,HIGH OFFSET BUFFER
+ 454  0150  0084        	MOV MP1H,A
+ 455  0151  0F00     R  	MOV A,LOW OFFSET BUFFER 
+ 456  0152  0083        	MOV MP1L,A
+ 457  0153  1F00     R  	CLR I2C_DATA_TOTAL
+ 458  0154              DATA_LEN_L:
+ 459  0154              
+ 460  0154              
+ 461  0154  0702        	MOV A,IAR1
+ 462  0155  0C0A        	XOR A,0AH 
+ 463  0156  3D0A        	SZ Z
+ 464  0157  295B        	JMP $+4
+ 465  0158  1480     R  	INC I2C_DATA_TOTAL
+ 466  0159  1483        	INC MP1L
+ 467  015A  2954        	JMP DATA_LEN_L
+"File: UART_1WIRE_MASTER_2.asm  Assembler  Version 2.98      Page 9
+
+ 468  015B  0702        	MOV A,IAR1
+ 469  015C  0C0D        	XOR A,0DH
+ 470  015D  390A        	SNZ Z
+ 471  015E  2961        	JMP $+3
+ 472  015F  1483        	INC MP1L
+ 473  0160  2954        	JMP DATA_LEN_L
+ 474  0161  1580     R  	DEC I2C_DATA_TOTAL
+ 475  0162  0003        	RET
+ 476  0163              ;*******************************************************************************
+ 477  0163              ;   CLEAR eDISPLAY 
+ 478  0163              ;*******************************************************************************
+ 479  0163              eDISPLAY_CLEAR_ALL:
+ 480  0163  0F00        	MOV A,00
+ 481  0164  0080     R  	MOV BUFFER1[0],A
+ 482  0165  0F80        	MOV A,128
+ 483  0166  0080     R  	MOV BUFFER1[1],A
+ 484  0167  0F00        	MOV A,00
+ 485  0168  0080     R  	MOV BUFFER1[2],A
+ 486  0169  0F80        	MOV A,128
+ 487  016A  0080     R  	MOV BUFFER1[3],A
+ 488  016B  2177        	CALL I2C_CLEAR
+ 489  016C  0003        	RET
+ 490  016D              eDISPLAY_CLEAR_1:
+ 491  016D  0F14        	MOV A,20
+ 492  016E  0080     R  	MOV BUFFER1[0],A
+ 493  016F  0F64        	MOV A,100
+ 494  0170  0080     R  	MOV BUFFER1[1],A
+ 495  0171  0F3C        	MOV A,60
+ 496  0172  0080     R  	MOV BUFFER1[2],A
+ 497  0173  0F14        	MOV A,20
+ 498  0174  0080     R  	MOV BUFFER1[3],A
+ 499  0175  2177        	CALL I2C_CLEAR
+ 500  0176  0003        	RET
+ 501  0177              I2C_CLEAR:
+ 502  0177  2182        	CALL I2C_CHECK_BUSY
+ 503  0178  0FAA        	MOV A,0AAH
+ 504  0179  0400     R  	XOR A,I2C_BUSY
+ 505  017A  390A        	SNZ Z
+ 506  017B  2977        	JMP I2C_CLEAR
+ 507  017C  0F04        	MOV A,04H
+ 508  017D  0080     R  	MOV I2C_COMMAND,A
+ 509  017E  0F04        	MOV A,04H
+ 510  017F  0080     R  	MOV I2C_DATA_TOTAL,A
+ 511  0180              	
+ 512  0180              	
+ 513  0180  218C        	CALL i2c_write_data
+ 514  0181              	
+ 515  0181              	
+ 516  0181  0003        	RET
+ 517  0182              ;*******************************************************************************
+ 518  0182              ;   check BUSY
+ 519  0182              ;*******************************************************************************
+ 520  0182              I2C_CHECK_BUSY:
+ 521  0182  21D2        	call i2c_start
+ 522  0183  0F5B        	MOV A,05BH				;ADDRESSS
+ 523  0184  0080     R  	MOV i2c_data,A
+ 524  0185  2205        	call i2c_write
+ 525  0186  21EB        	call i2c_read_ack
+ 526  0187  2215        	CALL I2C_READ
+ 527  0188  21DF        	CALL i2c_stop
+"File: UART_1WIRE_MASTER_2.asm  Assembler  Version 2.98      Page 10
+
+ 528  0189  0700     R  	mov a,i2c_data
+ 529  018A  0080     R  	mov I2C_BUSY,A
+ 530  018B              	
+ 531  018B  0003        	RET
+ 532  018C              ;*******************************************************************************
+ 533  018C              ;   i2c_write_data
+ 534  018C              ;*******************************************************************************
+ 535  018C              i2c_write_data:
+ 536  018C  0F5A        	MOV A,05AH				;ADDRESSS
+ 537  018D  0080     R  	MOV i2c_data,A
+ 538  018E  21D2        	call	i2c_start
+ 539  018F  2205        	call	i2c_write
+ 540  0190  21EB        	call	i2c_read_ack
+ 541  0191              	
+ 542  0191  0700     R  	MOV A,I2C_COMMAND		;COMMAND
+ 543  0192  0080     R  	MOV i2c_data,A
+ 544  0193  2205        	CALL i2c_write
+ 545  0194  21EB        	call i2c_read_ack
+ 546  0195              	
+ 547  0195  0F00        	MOV A,00H
+ 548  0196  0080     R  	MOV i2c_data,A
+ 549  0197  2205        	CALL i2c_write
+ 550  0198  21EB        	call i2c_read_ack
+ 551  0199              	
+ 552  0199  0700     R  	MOV A,I2C_DATA_TOTAL
+ 553  019A  0080     R  	MOV i2c_data,A
+ 554  019B  2205        	CALL i2c_write
+ 555  019C  21EB        	call i2c_read_ack
+ 556  019D              	
+ 557  019D  0F05        	MOV A,5				
+ 558  019E  0080     R  	MOV COUNT,A
+ 559  019F              I2C_WRITE_DATA2:
+ 560  019F  0F00        	mov	A, 00H
+ 561  01A0  0080     R  	MOV i2c_data,A
+ 562  01A1  2205        	call	i2c_write
+ 563  01A2  21EB        	call	i2c_read_ack
+ 564  01A3  1481        	inc	MP0
+ 565  01A4  1780     R  	sdz	COUNT
+ 566  01A5  299F        	jmp	i2c_write_data2
+ 567  01A6              	
+ 568  01A6              	
+ 569  01A6  0700     R  	MOV A,I2C_DATA_TOTAL
+ 570  01A7  0080     R  	MOV COUNT,A
+ 571  01A8  0F00     R  	MOV A,OFFSET BUFFER1
+ 572  01A9  0081        	MOV MP0,A
+ 573  01AA              I2C_L1:
+ 574  01AA  0700        	MOV A,IAR0
+ 575  01AB  1481        	INC MP0
+ 576  01AC  0080     R  	MOV i2c_data,A
+ 577  01AD  2205        	CALL i2c_write
+ 578  01AE  21EB        	call i2c_read_ack
+ 579  01AF              
+ 580  01AF              	
+ 581  01AF  1780     R  	SDZ COUNT
+ 582  01B0  29AA        	JMP I2C_L1
+ 583  01B1              	
+ 584  01B1              	
+ 585  01B1              I2C_WRITE_DATA3:	
+ 586  01B1  21DF        	call	i2c_stop
+ 587  01B2  0003        	ret	
+"File: UART_1WIRE_MASTER_2.asm  Assembler  Version 2.98      Page 11
+
+ 588  01B3              
+ 589  01B3              ;*******************************************************************************
+ 590  01B3              ;   delay 20uS
+ 591  01B3              ;*******************************************************************************	
+ 592  01B3              delay_20us:
+ 593  01B3  0F14        	MOV A,20
+ 594  01B4  1785        	SDZ ACC
+ 595  01B5  29B4        	JMP $-1
+ 596  01B6  0003        	RET
+ 597  01B7              ;*******************************************************************************
+ 598  01B7              ;   CLEAR_BUFFER
+ 599  01B7              ;*******************************************************************************
+ 600  01B7              CLEAR_BUFFER:	
+ 601  01B7  0F00     R  	MOV A,OFFSET BUFFER1
+ 602  01B8  0081        	MOV MP0,A
+ 603  01B9  0F14        	MOV A,20
+ 604  01BA  0080     R  	MOV COUNT,A
+ 605  01BB  0F20        	MOV A,32
+ 606  01BC  0080        	MOV IAR0,A
+ 607  01BD  1481        	INC MP0
+ 608  01BE  1780     R  	SDZ COUNT
+ 609  01BF  29BB        	JMP $-4
+ 610  01C0  0003        	RET
+ 611  01C1              CLEAR_BUFFER1:	
+ 612  01C1  0F00     R  	MOV A,OFFSET BUFFER
+ 613  01C2  0081        	MOV MP0,A
+ 614  01C3  0F14        	MOV A,20
+ 615  01C4  0080     R  	MOV COUNT,A
+ 616  01C5  0F00        	MOV A,0
+ 617  01C6  0080        	MOV IAR0,A
+ 618  01C7  1481        	INC MP0
+ 619  01C8  1780     R  	SDZ COUNT
+ 620  01C9  29C5        	JMP $-4
+ 621  01CA  0003        	RET
+ 622  01CB              
+ 623  01CB              ;*******************************************************************************
+ 624  01CB              ;	i2c initial
+ 625  01CB              ;*******************************************************************************
+ 626  01CB              i2c_init:
+ 627  01CB  33A6        	set SCLPU
+ 628  01CC  3326        	set SDAPU
+ 629  01CD  37A5        	clr	sclc
+ 630  01CE  3725        	clr	sdac
+ 631  01CF  33A4        	set	scl
+ 632  01D0  3324        	set	sda
+ 633  01D1              	
+ 634  01D1  0003        	ret
+ 635  01D2              
+ 636  01D2              ;*******************************************************************************
+ 637  01D2              ;	i2c start signal
+ 638  01D2              ;*******************************************************************************
+ 639  01D2              i2c_start:
+ 640  01D2  37A4        	CLR SCL 
+ 641  01D3  3724        	CLR SDA
+ 642  01D4  37A5        	CLR SCLC
+ 643  01D5  3725        	CLR SDAC
+ 644  01D6  21B3        	call	delay_20us   
+ 645  01D7  33A4        	SET SCL
+ 646  01D8  3324        	SET sda
+ 647  01D9  21B3        	call	delay_20us
+"File: UART_1WIRE_MASTER_2.asm  Assembler  Version 2.98      Page 12
+
+ 648  01DA  3724            clr SDA
+ 649  01DB  21B3            CALL delay_20us
+ 650  01DC  37A4            CLR SCL
+ 651  01DD  21B3            CALL delay_20us
+ 652  01DE  0003            ret
+ 653  01DF              ;*******************************************************************************
+ 654  01DF              ;	i2c stop signal
+ 655  01DF              ;*******************************************************************************
+ 656  01DF              i2c_stop:
+ 657  01DF  37A4        	clr     scl
+ 658  01E0  3724        	CLR SDA
+ 659  01E1  3725        	CLR SDAC 
+ 660  01E2  21B3        	call	delay_20us
+ 661  01E3  33A4            set     scl
+ 662  01E4  21B3            call	delay_20us
+ 663  01E5  3724            clr     sda
+ 664  01E6  21B3            call	delay_20us
+ 665  01E7  3324            set     sda
+ 666  01E8  208E            CALL	DELAY
+ 667  01E9  208E            call delay
+ 668  01EA  0003            ret
+ 669  01EB              ;*******************************************************************************
+ 670  01EB              ;	i2c read ack
+ 671  01EB              ;*******************************************************************************      
+ 672  01EB              i2c_read_ack:
+ 673  01EB  37A4        	clr	SCL
+ 674  01EC  3325        	set SDAC
+ 675  01ED  21B3        	call delay_20us
+ 676  01EE  33A4        	set SCL	
+ 677  01EF  21B3        	call delay_20us
+ 678  01F0  1F00     R  	clr DEL1
+ 679  01F1  1F80     R  	set i2c_ack
+ 680  01F2              wait_ack:
+ 681  01F2  3B24        	snz SDA
+ 682  01F3  29F7        	jmp GET_ACK
+ 683  01F4  1780     R  	SDZ DEL1
+ 684  01F5  29F2        	JMP WAIT_ACK
+ 685  01F6  1F00     R  	CLR i2c_ack
+ 686  01F7              GET_ACK:
+ 687  01F7  21B3        	call delay_20us
+ 688  01F8  37A4        	CLR SCL
+ 689  01F9  21B3        	CALL delay_20us
+ 690  01FA              	
+ 691  01FA  3725        	CLR SDAC
+ 692  01FB  0003        	ret	
+ 693  01FC              i2c_write_ack:
+ 694  01FC  37A4        	clr scl 
+ 695  01FD  3324        	set SDA
+ 696  01FE  3725        	clr SDAC
+ 697  01FF  21B3        	call delay_20us
+ 698  0200  33A4        	set SCL
+ 699  0201  21B3        	call delay_20us
+ 700  0202  37A4        	clr SCL
+ 701  0203  21B3        	call delay_20us
+ 702  0204  0003        	ret 
+ 703  0205              ;*******************************************************************************
+ 704  0205              ;	i2c write 8 bits
+ 705  0205              ;*******************************************************************************
+ 706  0205              i2c_write:
+ 707  0205  37A4                clr	scl  
+"File: UART_1WIRE_MASTER_2.asm  Assembler  Version 2.98      Page 13
+
+ 708  0206  3725                clr SDAC
+ 709  0207  0F08                mov     a,8
+ 710  0208  0080     R          mov     i2c_count,a
+ 711  0209              i2c_write1:
+ 712  0209  3724        		clr     sda
+ 713  020A  3C00     R          sz      i2c_data.7
+ 714  020B  3324        		set     SDA
+ 715  020C  21B3                call	delay_20us
+ 716  020D  33A4                set     scl
+ 717  020E  21B3                call	delay_20us
+ 718  020F  37A4                clr     scl
+ 719  0210  21B3                call 	delay_20us
+ 720  0211  1880     R          rl      i2c_data
+ 721  0212  1780     R          sdz     i2c_count
+ 722  0213  2A09                jmp     i2c_write1
+ 723  0214  0003                ret
+ 724  0215              
+ 725  0215              ;*******************************************************************************
+ 726  0215              ; i2c READ 8bits
+ 727  0215              ;*******************************************************************************
+ 728  0215              I2C_READ:
+ 729  0215  1F00     R  	CLR i2c_data
+ 730  0216  0F08        	mov A,8
+ 731  0217  0080     R      mov i2c_count,a
+ 732  0218  3325            set SDAC
+ 733  0219              I2C_READ1:	
+ 734  0219  33A4        	set SCL
+ 735  021A  21B3        	call delay_20us  
+ 736  021B  1A80     R  	RLC i2c_data
+ 737  021C  3F24        	sz SDA
+ 738  021D  3000     R  	set i2c_data.0	
+ 739  021E  21B3        	call delay_20us
+ 740  021F  37A4        	clr	SCL
+ 741  0220  21B3        	call delay_20us
+ 742  0221              
+ 743  0221  1780     R  	sdz i2c_count
+ 744  0222  2A19            jmp	I2C_READ1
+ 745  0223  3324            set SDA
+ 746  0224  3725        	clr	sdac
+ 747  0225  21B3        	call delay_20us
+ 748  0226  33A4        	set SCL
+ 749  0227  21B3        	call delay_20us
+ 750  0228  37A4        	clr SCL
+ 751  0229  0003        	ret	
+
+
+        0 Errors, 0 Warnings

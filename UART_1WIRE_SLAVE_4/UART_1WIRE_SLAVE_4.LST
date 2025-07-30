@@ -1,0 +1,247 @@
+"File: UART_1WIRE_SLAVE_4.asm  Assembler  Version 2.98      Page 1
+
+
+   1  0000              include HT66F2390.inc
+
+
+   2  0000              
+   3  0000              ds	.section	'data'
+   4  0000              
+   5  0000              UART_PIN EQU PA4
+   6  0000              UART_PINC EQU PAC4
+   7  0000              UART_PINPU EQU PAPU4
+   8  0000              
+   9  0000  00          UART_DATA DB ?
+  10  0001  00          command DB ?
+  11  0002  00          BUFFER2 DB ?
+  12  0003              
+  13  0003  00          COUNT DB ?
+  14  0004  00          END_L DB ?
+  15  0005  00          END_H DB ?
+  16  0006              ROMBANK 0 cs
+  17  0000              cs	.section	at  000h	'code'
+  18  0000              INIT:
+  19  0000  0FAF        	MOV A,10101111B
+  20  0001  00BE        	MOV WDTC,A
+  21  0002              
+  22  0002  3215        	SET UART_PINC	
+  23  0003  3216        	SET UART_PINPU		
+  24  0004              	
+  25  0004              MAIN:
+  26  0004              	
+  27  0004  3E14        	SZ UART_PIN			;接收資料
+  28  0005  2804        	JMP $-1
+  29  0006  203B        	CALL UART_READ
+  30  0007              	
+  31  0007  0700     R  	MOV A,UART_DATA		;
+  32  0008  0EF0        	AND A,11110000B		;接收到的資料高4bit為地址
+  33  0009  0CF0        	XOR A,0F0H			;地址為F
+  34  000A  390A        	SNZ Z				
+  35  000B  2804        	JMP MAIN
+  36  000C              		
+  37  000C  0700     R  	MOV A,UART_DATA		
+  38  000D  0E0F        	AND A,00001111B		;接收到的資料低4bit為指令	
+  39  000E  0080     R  	mov command,A		;
+  40  000F              	
+  41  000F  0180     R  	CPL UART_DATA		;將資料取補數並回傳
+  42  0010  202A        	CALL UART_WRITE
+  43  0011              	
+  44  0011  0700     R  	mov a,command	
+  45  0012  0C00        	XOR A,00h			;指令為00h
+  46  0013  390A        	SNZ Z
+  47  0014  2817        	JMP $+3
+  48  0015  2073        	CALL WRITE_HELLO
+  49  0016  2804        	JMP MAIN
+  50  0017              	
+  51  0017  0700     R  	mov a,command	
+  52  0018  0C01        	XOR A,01h			;指令為01h
+  53  0019  390A        	SNZ Z
+  54  001A  281D        	JMP $+3
+  55  001B  205F        	CALL WRITE_ID
+  56  001C  2804        	JMP MAIN
+  57  001D              	
+"File: UART_1WIRE_SLAVE_4.asm  Assembler  Version 2.98      Page 2
+
+  58  001D  0700     R  	mov a,command		
+  59  001E  0C02        	XOR A,02h			;指令為02h
+  60  001F  390A        	SNZ Z
+  61  0020  2823        	JMP $+3
+  62  0021  2069        	CALL WRITE_NAME
+  63  0022  2804        	JMP MAIN
+  64  0023              	
+  65  0023  0700     R  	mov a,command	
+  66  0024  0C03        	XOR A,03h			;指令為03h
+  67  0025  390A        	SNZ Z
+  68  0026  2829        	JMP $+3
+  69  0027  207D        	CALL WRITE_word1
+  70  0028  2804        	JMP MAIN
+  71  0029              	
+  72  0029              	
+  73  0029  2804        	JMP MAIN
+  74  002A              ;----------------------------------------
+  75  002A              ;	UART Transmitter
+  76  002A              ;----------------------------------------
+  77  002A              UART_WRITE:
+  78  002A  3615        	CLR UART_PINC
+  79  002B              	
+  80  002B  0F08        	MOV A,8
+  81  002C  0080     R  	MOV COUNT,A
+  82  002D  3614        	CLR UART_PIN			;Start bit
+  83  002E  2087        	CALL DELAY		
+  84  002F              	
+  85  002F              	UART_WRITE1:			;data bits
+  86  002F              	
+  87  002F  3C00     R  		SZ UART_DATA.0
+  88  0030  3214        		SET UART_PIN
+  89  0031  3800     R  		SNZ UART_DATA.0
+  90  0032  3614        		CLR UART_PIN
+  91  0033  2087        		CALL DELAY
+  92  0034  1980     R  		RR UART_DATA
+  93  0035  1780     R  		SDZ COUNT 
+  94  0036  282F        		JMP UART_WRITE1
+  95  0037              	
+  96  0037  3214        	SET UART_PIN			;stop bit
+  97  0038  2087        	CALL DELAY	
+  98  0039              	
+  99  0039  3215        	SET UART_PINC
+ 100  003A              	
+ 101  003A  0003        	RET	
+ 102  003B              ;----------------------------------------
+ 103  003B              ;	UART Receiver 
+ 104  003B              ;----------------------------------------
+ 105  003B              UART_READ:
+ 106  003B  0F08        	MOV A,8
+ 107  003C  0080     R  	MOV COUNT,A
+ 108  003D  2087        	CALL DELAY
+ 109  003E  0F22        	MOV A,34				;使判斷位置為中間值
+ 110  003F  1785        	SDZ ACC
+ 111  0040  283F        	JMP $-1
+ 112  0041              		
+ 113  0041              	UART_READ1:				;DATA
+ 114  0041              		
+ 115  0041  1980     R  		RR UART_DATA		
+ 116  0042  3E14        		SZ UART_PIN
+ 117  0043  3000     R  		SET UART_DATA.7
+"File: UART_1WIRE_SLAVE_4.asm  Assembler  Version 2.98      Page 3
+
+ 118  0044  3A14        		SNZ UART_PIN
+ 119  0045  3400     R  		CLR UART_DATA.7
+ 120  0046  2087        		CALL DELAY
+ 121  0047  1780     R  		SDZ COUNT 
+ 122  0048  2841        		JMP UART_READ1
+ 123  0049              	
+ 124  0049  3A14        	SNZ UART_PIN			;STOP
+ 125  004A  2849        	JMP $-1		
+ 126  004B              	
+ 127  004B  0003        	RET
+ 128  004C              ;----------------------------------------
+ 129  004C              ;	write loop
+ 130  004C              ;----------------------------------------
+ 131  004C              WRITE_DATA:
+ 132  004C  1D00     R  	TABRD UART_DATA
+ 133  004D  202A        	CALL UART_WRITE
+ 134  004E  1487        	INC TBLP
+ 135  004F              	
+ 136  004F  1E07        	SNZ TBLP				;判斷資料位置是否跨頁
+ 137  0050  1489        	INC TBHP
+ 138  0051              	
+ 139  0051  0707        	MOV A,TBLP				;判斷低8BIT位置是否相同
+ 140  0052  0400     R  	XOR A,END_L	
+ 141  0053  390A        	SNZ Z				
+ 142  0054  284C        	JMP WRITE_DATA
+ 143  0055  0709        	MOV A,TBHP				;相同則判斷高位元
+ 144  0056  0400     R  	XOR A,END_H				;判斷高8BIT位置是否相同
+ 145  0057  390A        	SNZ Z
+ 146  0058  284C        	JMP WRITE_DATA
+ 147  0059  205B        	CALL WRITE_DATA_END	
+ 148  005A  0003        	RET
+ 149  005B              ;----------------------------------------
+ 150  005B              ;	停止訊號
+ 151  005B              ;----------------------------------------
+ 152  005B              WRITE_DATA_END:
+ 153  005B  0F3E        	MOV A,'>'
+ 154  005C  0080     R  	MOV UART_DATA,A
+ 155  005D  202A        	CALL UART_WRITE
+ 156  005E              	;MOV A,0AH
+ 157  005E              	;MOV UART_DATA,A
+ 158  005E              	;CALL UART_WRITE
+ 159  005E  0003        	RET
+ 160  005F              ;----------------------------------------
+ 161  005F              ;	設定字串位置
+ 162  005F              ;----------------------------------------
+ 163  005F              WRITE_ID:
+ 164  005F  0F00        	MOV A,HIGH ID
+ 165  0060  0089        	MOV TBHP,A
+ 166  0061  0F8B        	MOV A,LOW ID
+ 167  0062  0087        	MOV TBLP,A
+ 168  0063  0F91        	MOV A,LOW ID_END
+ 169  0064  0080     R  	MOV END_L,A
+ 170  0065  0F00        	MOV A,HIGH ID_END
+ 171  0066  0080     R  	MOV END_H,A
+ 172  0067  204C        	CALL WRITE_DATA
+ 173  0068  0003        	RET
+ 174  0069              WRITE_NAME:
+ 175  0069  0F00        	MOV A,HIGH NAME
+ 176  006A  0089        	MOV TBHP,A
+ 177  006B  0F91        	MOV A,LOW NAME
+"File: UART_1WIRE_SLAVE_4.asm  Assembler  Version 2.98      Page 4
+
+ 178  006C  0087        	MOV TBLP,A
+ 179  006D  0F99        	MOV A,LOW NAME_END
+ 180  006E  0080     R  	MOV END_L,A
+ 181  006F  0F00        	MOV A,HIGH NAME_END
+ 182  0070  0080     R  	MOV END_H,A
+ 183  0071  204C        	CALL WRITE_DATA
+ 184  0072  0003        	RET
+ 185  0073              WRITE_HELLO:
+ 186  0073  0F00        	MOV A,HIGH HELLO
+ 187  0074  0089        	MOV TBHP,A
+ 188  0075  0F99        	MOV A,LOW HELLO
+ 189  0076  0087        	MOV TBLP,A
+ 190  0077  0F9E        	MOV A,LOW HELLO_END
+ 191  0078  0080     R  	MOV END_L,A
+ 192  0079  0F00        	MOV A,HIGH HELLO_END
+ 193  007A  0080     R  	MOV END_H,A
+ 194  007B  204C        	CALL WRITE_DATA
+ 195  007C  0003        	RET	
+ 196  007D              WRITE_word1:
+ 197  007D  0F00        	MOV A,HIGH word1
+ 198  007E  0089        	MOV TBHP,A
+ 199  007F  0F9E        	MOV A,LOW word1
+ 200  0080  0087        	MOV TBLP,A
+ 201  0081  0FA4        	MOV A,LOW word1_END
+ 202  0082  0080     R  	MOV END_L,A
+ 203  0083  0F00        	MOV A,HIGH word1_END
+ 204  0084  0080     R  	MOV END_H,A
+ 205  0085  204C        	CALL WRITE_DATA
+ 206  0086  0003        	RET		
+ 207  0087              ;----------------------------------------
+ 208  0087              ;	Delay  2+1+(1+2)*67+2+2 = 208
+ 209  0087              ;----------------------------------------
+ 210  0087              DELAY: ; 9600 BAUD = 104.2uS
+ 211  0087  0F43        	MOV A,67
+ 212  0088  1785        	SDZ	ACC
+ 213  0089  2888        	JMP $-1
+ 214  008A  0003        	RET
+ 215  008B              TEST_END:
+ 216  008B              ID:
+ 217  008B  0073 006C   	DC 'slave2'
+            0061 0076 0065 0032
+ 218  0091              ID_END:
+ 219  0091              
+ 220  0091              NAME:
+ 221  0091  0034 0030   	DC '40926116'
+            0039 0032 0036 0031 0031 0036
+ 222  0099              NAME_END:
+ 223  0099              
+ 224  0099              HELLO:
+ 225  0099  0048 0045   	DC 'HELLO'
+            004C 004C 004F
+ 226  009E              HELLO_END:
+ 227  009E              word1:
+ 228  009E  0044 0065   	DC 'Design'
+            0073 0069 0067 006E
+ 229  00A4              word1_END:
+
+
+        0 Errors, 0 Warnings

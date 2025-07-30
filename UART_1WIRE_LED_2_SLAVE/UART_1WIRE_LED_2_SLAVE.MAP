@@ -1,0 +1,32 @@
+
+Linker Version 8.7.7.190806
+Input Object File: C:\Users\z1012\OneDrive\文件\GitHub\HT66F2390\Code\UART\UART_1WIRE_LED_2_SLAVE\UART_1WIRE_LED_2_SLAVE.OBJ
+
+Input Library File: C:\Program Files\Holtek MCU Development Tools\HT-IDE3000V8.x\LIB\LIBHOLTEKGCC.LIB
+Input Library File: C:\Program Files\Holtek MCU Development Tools\HT-IDE3000V8.x\LIB\v3_tabrd_mrsc.lib
+
+
+     Bank    Start     End      Length     Class    AvgIns    Name
+     00h     0000h     00a2h    00a3h      CODE               CS (C:\Users\z1012\OneDrive\文件\GitHub\HT66F2390\Code\UART\UART_1WIRE_LED_2_SLAVE\UART_1WIRE_LED_2_SLAVE.OBJ)
+     00h     0080h     0087h    0008h      DATA     6.375     DS (C:\Users\z1012\OneDrive\文件\GitHub\HT66F2390\Code\UART\UART_1WIRE_LED_2_SLAVE\UART_1WIRE_LED_2_SLAVE.OBJ)
+
+
+
+ROM Usage Statistics
+     Size      Used     Percentage
+     2000h     00a3h    1%
+
+RAM Usage Statistics
+    Bank      Size      Used     Percentage
+     00h       0080h     0008h    6%
+     01h       0080h     0000h    0%
+     02h       0080h     0000h    0%
+     Total     0180h     0008h    2%
+
+Use Stack Count
+
+Call Tree
+
+HLINK: Program entry point at section 'CS' (address 0) of file 'C:\Users\z1012\OneDrive\文件\GitHub\HT66F2390\Code\UART\UART_1WIRE_LED_2_SLAVE\UART_1WIRE_LED_2_SLAVE.OBJ'
+
+Total 0 error(s), Total 0 Warning(s)

@@ -1,0 +1,266 @@
+"File: UART_1WIRE_LED_2_SLAVE.asm  Assembler  Version 2.98      Page 1
+
+
+   1  0000              include HT66F50.inc
+
+
+   2  0000              
+   3  0000              ds	.section	'data'
+   4  0000              
+   5  0000              UART_PIN EQU PA4
+   6  0000              UART_PINC EQU PAC4
+   7  0000              UART_PINPU EQU PAPU4
+   8  0000              
+   9  0000              LED_PORT EQU PA6
+  10  0000              LED_PORTC EQU PAC6
+  11  0000  00          UART_DATA DB ?
+  12  0001              
+  13  0001  00          CMD DB ?
+  14  0002  00          ADDRESS DB ?
+  15  0003  00          MODE DB ?
+  16  0004  00          COUNT DB ?
+  17  0005              
+  18  0005  00          DEL1 DB ?
+  19  0006  00          DEL2 DB ?
+  20  0007  00          DEL3 DB ?
+  21  0008              
+  22  0000              cs	.section	at  000h	'code'
+  23  0000              
+  24  0000              
+  25  0000              INIT:
+  26  0000  1F32        	clr ACERL
+  27  0001  321B        	SET UART_PINC	
+  28  0002  3219        	SET UART_PINPU		
+  29  0003  371B        	CLR LED_PORTC
+  30  0004  371A        	CLR LED_PORT
+  31  0005  1F00     R  	CLR MODE
+  32  0006  0FC0        	MOV A,0C0H
+  33  0007  0080     R  	MOV ADDRESS,A
+  34  0008              MAIN:
+  35  0008  1080     R  	sz MODE
+  36  0009  2030        	CALL MAIN1	
+  37  000A  3E1A        	SZ UART_PIN			;接收資料
+  38  000B  280A        	JMP $-1
+  39  000C  206F        	CALL UART_READ
+  40  000D  0700     R  	MOV A,UART_DATA		;
+  41  000E  0EF0        	AND A,11110000B		;接收到的資料高4bit為地址
+  42  000F  0400     R  	XOR A,ADDRESS		;地址為F
+  43  0010  390A        	SNZ Z				
+  44  0011  2808        	JMP MAIN
+  45  0012  0700     R  	MOV A,UART_DATA		
+  46  0013  0E0F        	AND A,00001111B		;接收到的資料低4bit為指令	
+  47  0014  0080     R  	mov CMD,A			;
+  48  0015  0180     R  	CPL UART_DATA		;將資料取補數並回傳
+  49  0016  205E        	CALL UART_WRITE
+  50  0017              	
+  51  0017  0700     R  	mov a,CMD	
+  52  0018  0C01        	XOR A,01h			;指令為01h
+  53  0019  390A        	SNZ Z
+  54  001A  281D        	JMP $+3
+  55  001B  331A        	SET LED_PORT
+  56  001C  2808        	JMP MAIN
+  57  001D  0700     R  	mov a,CMD		
+"File: UART_1WIRE_LED_2_SLAVE.asm  Assembler  Version 2.98      Page 2
+
+  58  001E  0C02        	XOR A,02h			;指令為02h
+  59  001F  390A        	SNZ Z
+  60  0020  2823        	JMP $+3
+  61  0021  371A        	CLR LED_PORT
+  62  0022  2808        	JMP MAIN
+  63  0023  0700     R  	mov a,CMD		
+  64  0024  0C03        	XOR A,03h			;指令為03h
+  65  0025  390A        	SNZ Z
+  66  0026  2829        	JMP $+3
+  67  0027  1F80     R  	set mode
+  68  0028  2808        	JMP MAIN
+  69  0029  0700     R  	mov a,CMD		
+  70  002A  0C04        	XOR A,04h			;指令為04h
+  71  002B  390A        	SNZ Z
+  72  002C  282F        	JMP $+3
+  73  002D  1F00     R  	clr MODE
+  74  002E  2808        	JMP MAIN
+  75  002F              	
+  76  002F  2808        	JMP MAIN
+  77  0030              
+  78  0030              MAIN1:
+  79  0030  1080     R  	SZ MODE 
+  80  0031  2833        	JMP $+2
+  81  0032  284A        	JMP MAIN1_END
+  82  0033              	
+  83  0033  331A        	SET LED_PORT
+  84  0034              	
+  85  0034  0FD1        	MOV A,0D1H
+  86  0035  0080     R  	MOV CMD,A
+  87  0036  204E        	CALL SEND_CMD
+  88  0037              
+  89  0037  0FE1        	MOV A,0E1H
+  90  0038  0080     R  	MOV CMD,A
+  91  0039  204E        	CALL SEND_CMD
+  92  003A              
+  93  003A  0FF1        	MOV A,0F1H
+  94  003B  0080     R  	MOV CMD,A
+  95  003C  204E        	CALL SEND_CMD
+  96  003D  2084        	call DELAY_1000
+  97  003E              	
+  98  003E  371A        	clr LED_PORT
+  99  003F              
+ 100  003F  0FD2        	MOV A,0D2H
+ 101  0040  0080     R  	MOV CMD,A
+ 102  0041  204E        	CALL SEND_CMD
+ 103  0042              
+ 104  0042  0FE2        	MOV A,0E2H
+ 105  0043  0080     R  	MOV CMD,A
+ 106  0044  204E        	CALL SEND_CMD
+ 107  0045              
+ 108  0045  0FF2        	MOV A,0F2H
+ 109  0046  0080     R  	MOV CMD,A
+ 110  0047  204E        	CALL SEND_CMD
+ 111  0048  2084        	call DELAY_1000
+ 112  0049  2830        	JMP MAIN1
+ 113  004A              	
+ 114  004A              MAIN1_END:
+ 115  004A  0F55        	MOV A,055H
+ 116  004B  0080     R  	MOV UART_DATA,A
+ 117  004C  205E        	CALL UART_WRITE
+"File: UART_1WIRE_LED_2_SLAVE.asm  Assembler  Version 2.98      Page 3
+
+ 118  004D              	
+ 119  004D  0003        	ret
+ 120  004E              	
+ 121  004E              SEND_CMD:
+ 122  004E  0700     R  	MOV A,CMD
+ 123  004F  0080     R  	MOV UART_DATA,A
+ 124  0050  205E        	CALL UART_WRITE
+ 125  0051  1F00     R  	clr DEL1
+ 126  0052              WAIT_ACK:	
+ 127  0052  3A1A        	SnZ UART_PIN					;
+ 128  0053  2857        	JMP GET_ACK
+ 129  0054  1780     R  	sdz DEL1
+ 130  0055  2852        	jmp WAIT_ACK
+ 131  0056  285D        	jmp SEND_CMD_END
+ 132  0057              GET_ACK:
+ 133  0057  206F        	CALL UART_READ
+ 134  0058  0700     R  	MOV A,UART_DATA
+ 135  0059  0105        	CPLA ACC
+ 136  005A  0400     R  	XOR A,CMD
+ 137  005B  390A        	SNZ Z
+ 138  005C  285D        	JMP SEND_CMD_END
+ 139  005D              
+ 140  005D              SEND_CMD_END:
+ 141  005D  0003        	RET
+ 142  005E              ;----------------------------------------
+ 143  005E              ;	UART Transmitter
+ 144  005E              ;----------------------------------------
+ 145  005E              UART_WRITE:
+ 146  005E  361B        	CLR UART_PINC
+ 147  005F              	
+ 148  005F  0F08        	MOV A,8
+ 149  0060  0080     R  	MOV COUNT,A
+ 150  0061  361A        	CLR UART_PIN			;Start bit
+ 151  0062  2080        	CALL DELAY		
+ 152  0063              	
+ 153  0063              	UART_WRITE1:			;data bits
+ 154  0063              	
+ 155  0063  3C00     R  		SZ UART_DATA.0
+ 156  0064  321A        		SET UART_PIN
+ 157  0065  3800     R  		SNZ UART_DATA.0
+ 158  0066  361A        		CLR UART_PIN
+ 159  0067  2080        		CALL DELAY
+ 160  0068  1980     R  		RR UART_DATA
+ 161  0069  1780     R  		SDZ COUNT 
+ 162  006A  2863        		JMP UART_WRITE1
+ 163  006B              	
+ 164  006B  321A        	SET UART_PIN			;stop bit
+ 165  006C  2080        	CALL DELAY	
+ 166  006D              	
+ 167  006D  321B        	SET UART_PINC
+ 168  006E              	
+ 169  006E  0003        	RET	
+ 170  006F              ;----------------------------------------
+ 171  006F              ;	UART Receiver 
+ 172  006F              ;----------------------------------------
+ 173  006F              UART_READ:
+ 174  006F  0F08        	MOV A,8
+ 175  0070  0080     R  	MOV COUNT,A
+ 176  0071  2080        	CALL DELAY
+ 177  0072  0F22        	MOV A,34				;使判斷位置為中間值
+"File: UART_1WIRE_LED_2_SLAVE.asm  Assembler  Version 2.98      Page 4
+
+ 178  0073  1785        	SDZ ACC
+ 179  0074  2873        	JMP $-1
+ 180  0075              		
+ 181  0075              	UART_READ1:				;DATA
+ 182  0075              		
+ 183  0075  1980     R  		RR UART_DATA		
+ 184  0076  3E1A        		SZ UART_PIN
+ 185  0077  3000     R  		SET UART_DATA.7
+ 186  0078  3A1A        		SNZ UART_PIN
+ 187  0079  3400     R  		CLR UART_DATA.7
+ 188  007A  2080        		CALL DELAY
+ 189  007B  1780     R  		SDZ COUNT 
+ 190  007C  2875        		JMP UART_READ1
+ 191  007D              	
+ 192  007D  3A1A        	SNZ UART_PIN			;STOP
+ 193  007E  287D        	JMP $-1		
+ 194  007F              	
+ 195  007F  0003        	RET
+ 196  0080              
+ 197  0080              	
+ 198  0080              ;----------------------------------------
+ 199  0080              ;	Delay  2+1+(1+2)*67+2+2 = 208
+ 200  0080              ;----------------------------------------
+ 201  0080              DELAY: ; 9600 BAUD = 104.2uS
+ 202  0080  0F43        	MOV A,67
+ 203  0081  1785        	SDZ	ACC
+ 204  0082  2881        	JMP $-1
+ 205  0083  0003        	RET
+ 206  0084              ;----------------------------------------
+ 207  0084              ;	Delay  1000mS
+ 208  0084              ;----------------------------------------	
+ 209  0084              DELAY_1000:
+ 210  0084  0F64        	MOV A,100
+ 211  0085  0080     R  	MOV DEL1,A
+ 212  0086              DEL_1:
+ 213  0086  0F3C        	MOV A,60
+ 214  0087  0080     R  	MOV DEL2,A
+ 215  0088              DEL_2:
+ 216  0088  0F6E        	MOV A,110
+ 217  0089  0080     R  	MOV DEL3,A
+ 218  008A              DEL_3:
+ 219  008A  3A1A        	snz UART_PIN
+ 220  008B  2893        	jmp GET_DATA
+ 221  008C  1780     R  	SDZ DEL3
+ 222  008D  288A        	JMP DEL_3
+ 223  008E  1780     R  	SDZ DEL2
+ 224  008F  2888        	JMP DEL_2
+ 225  0090  1780     R  	SDZ DEL1
+ 226  0091  2886        	JMP DEL_1
+ 227  0092  28A2        	JMP DEL_END	
+ 228  0093              GET_DATA:
+ 229  0093  206F        	CALL UART_READ
+ 230  0094  0700     R  	MOV A,UART_DATA		;
+ 231  0095  0EF0        	AND A,11110000B		;接收到的資料高4bit為地址
+ 232  0096  0400     R  	XOR A,ADDRESS		;地址為F
+ 233  0097  390A        	SNZ Z				
+ 234  0098  28A2        	JMP DEL_END
+ 235  0099              
+ 236  0099  0700     R  	MOV A,UART_DATA		
+ 237  009A  0E0F        	AND A,00001111B		;接收到的資料低4bit為指令	
+"File: UART_1WIRE_LED_2_SLAVE.asm  Assembler  Version 2.98      Page 5
+
+ 238  009B  0080     R  	mov CMD,A		;
+ 239  009C              	
+ 240  009C  0180     R  	CPL UART_DATA		;將資料取補數並回傳
+ 241  009D  205E        	CALL UART_WRITE
+ 242  009E  0700     R  	mov a,CMD		
+ 243  009F  0C04        	XOR A,04h			;指令為04h
+ 244  00A0  3D0A        	SZ Z
+ 245  00A1  1F00     R  	clr MODE
+ 246  00A2              DEL_END:	
+ 247  00A2  0003        	RET 	
+ 248  00A3              
+ 249  00A3              
+ 250  00A3              	END
+
+
+        0 Errors, 0 Warnings

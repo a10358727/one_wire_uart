@@ -1,0 +1,69 @@
+
+Linker Version 8.7.7.190806
+Input Object File: C:\Users\z1012\OneDrive\文件\GitHub\HT66F2390\Code\UART\UART_1WIRE_MASTER\UART_1WIRE_MASTER.OBJ
+
+Input Library File: C:\Program Files\Holtek MCU Development Tools\HT-IDE3000V8.x\LIB\LIBHOLTEKGCC.LIB
+Input Library File: C:\Program Files\Holtek MCU Development Tools\HT-IDE3000V8.x\LIB\v3_lmrmc.lib
+
+
+     Bank    Start     End      Length     Class    AvgIns    Name
+     00h     0000h     009bh    009ch      CODE               CS (C:\Users\z1012\OneDrive\文件\GitHub\HT66F2390\Code\UART\UART_1WIRE_MASTER\UART_1WIRE_MASTER.OBJ)
+     00h     0080h     009ch    001dh      DATA     1.2069    DS (C:\Users\z1012\OneDrive\文件\GitHub\HT66F2390\Code\UART\UART_1WIRE_MASTER\UART_1WIRE_MASTER.OBJ)
+
+
+
+ROM Usage Statistics
+    Bank      Size      Used     Percentage
+     00h       2000h     009ch    1%
+     01h       2000h     0000h    0%
+     02h       2000h     0000h    0%
+     03h       2000h     0000h    0%
+     04h       2000h     0000h    0%
+     05h       2000h     0000h    0%
+     06h       2000h     0000h    0%
+     07h       2000h     0000h    0%
+     Total     10000h     009ch    0%
+
+RAM Usage Statistics
+    Bank      Size      Used     Percentage
+     00h       0080h     001dh    22%
+     01h       0080h     0000h    0%
+     02h       0080h     0000h    0%
+     03h       0080h     0000h    0%
+     04h       0080h     0000h    0%
+     05h       0080h     0000h    0%
+     06h       0080h     0000h    0%
+     07h       0080h     0000h    0%
+     08h       0080h     0000h    0%
+     09h       0080h     0000h    0%
+     0ah       0080h     0000h    0%
+     0bh       0080h     0000h    0%
+     0ch       0080h     0000h    0%
+     0dh       0080h     0000h    0%
+     0eh       0080h     0000h    0%
+     0fh       0080h     0000h    0%
+     10h       0080h     0000h    0%
+     11h       0080h     0000h    0%
+     12h       0080h     0000h    0%
+     13h       0080h     0000h    0%
+     14h       0080h     0000h    0%
+     15h       0080h     0000h    0%
+     16h       0080h     0000h    0%
+     17h       0080h     0000h    0%
+     18h       0080h     0000h    0%
+     19h       0080h     0000h    0%
+     1ah       0080h     0000h    0%
+     1bh       0080h     0000h    0%
+     1ch       0080h     0000h    0%
+     1dh       0080h     0000h    0%
+     1eh       0080h     0000h    0%
+     1fh       0080h     0000h    0%
+     Total     1000h     001dh    0%
+
+Use Stack Count
+
+Call Tree
+
+HLINK: Program entry point at section 'CS' (address 0) of file 'C:\Users\z1012\OneDrive\文件\GitHub\HT66F2390\Code\UART\UART_1WIRE_MASTER\UART_1WIRE_MASTER.OBJ'
+
+Total 0 error(s), Total 0 Warning(s)
